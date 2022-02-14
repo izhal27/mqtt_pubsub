@@ -1,0 +1,12 @@
+{
+  "vsmqtt.brokerProfiles": [
+    {
+      "name": "emqx",
+      "host": "broker.emqx.io",
+      "port": 1883,
+      "clientId": "vsmqtt_client",
+      "username": "emqx",
+      "password": "public"
+    }
+  ]
+}

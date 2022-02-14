@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <title>ESP32 MQTT PubSub</title>
+  </head>
+
+  <body>
+    <main class="container">
+      <h1 class="header center blue-text">ESP32 MQTT PubSub</h1>
+
+      <div class="row center">
+        <h4 class="col s12 light">
+          Connection status:
+          <span id="connection-status"> Closed</span>
+        </h4>
+      </div>
+      <div class="row center">
+        <div class="col s12 m4">
+          <h5 class="red-text">Red Status</h5>
+          <div>
+            <img
+              id="red-led"
+              src="/images/0.jpg"
+              alt="Bulb"
+              width="200"
+              height="300"
+            />
+            <div>
+              <a
+                id="button-red-on"
+                class="waves-effect waves-light btn disabled"
+                onclick="toggleLed('ON')"
+                >ON</a
+              >
+              <a
+                id="button-red-off"
+                class="waves-effect waves-light btn disabled"
+                onclick=" toggleLed('OFF')"
+                >OFF</a
+              >
+            </div>
+          </div>
+        </div>
+        <div class="col s12 m4">
+          <h5 class="yellow-text">Yellow Status</h5>
+          <div>
+            <img
+              id="yellow-led"
+              src="/images/0.jpg"
+              alt="Bulb"
+              width="200"
+              height="300"
+            />
+            <div>
+              <a
+                id="button-yellow-on"
+                class="waves-effect waves-light btn disabled"
+                onclick="toggleLed('ON')"
+                >ON</a
+              >
+              <a
+                id="button-yellow-off"
+                class="waves-effect waves-light btn disabled"
+                onclick=" toggleLed('OFF')"
+                >OFF</a
+              >
+            </div>
+          </div>
+        </div>
+        <div class="col s12 m4">
+          <h5 class="green-text">Green Status</h5>
+          <div>
+            <img
+              id="green-led"
+              src="/images/0.jpg"
+              alt="Bulb"
+              width="200"
+              height="300"
+            />
+            <div>
+              <a
+                id="button-green-on"
+                class="waves-effect waves-light btn disabled"
+                onclick="toggleLed('ON')"
+                >ON</a
+              >
+              <a
+                id="button-green-off"
+                class="waves-effect waves-light btn disabled"
+                onclick=" toggleLed('OFF')"
+                >OFF</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script
+    src=" https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.5/mqtt.min.js"
+    integrity="sha512-O1ua7Y2KndehfLohWt0tueZVjH7Ip/Klo8lBWHPh8PFvWqNhXJ+GoutDBKSFuWlLdPBJVA+lwqwjCZd/G8k3IQ=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  ></script>
+  <script>
+    const clientId = "izhal-27";
+    const topic = "esp32/gooner";
+    const ledArray = document.querySelectorAll("img[id*='-led']");
+    const buttonOn = document.querySelector("#button-on");
+    const buttonOff = document.querySelector("#button-off");
+
+    const client = mqtt.connect("ws://broker.emqx.io:8083/mqtt", {
+      keepalive: 60,
+      clientId: clientId,
+      protocolId: "MQTT",
+      protocolVersion: 4,
+      clean: true,
+      reconnectPeriod: 1000,
+      connectTimeout: 30 * 1000,
+    });
+
+    client.on("message", (topic, message, packet) => {
+      console.log(
+        "Received Message: " + message.toString() + "\nOn topic: " + topic
+      );
+
+      const msgStr = message.toString();
+      const statusArr = msgStr.split(";").map((sl) => sl.substring(2));
+
+      setLed(statusArr);
+    });
+
+    client.on("error", (err) => {
+      console.log("Connection error: ", err);
+      client.end();
+    });
+
+    client.on("reconnect", () => {
+      setConnectStatus("Reconnecting");
+    });
+
+    client.on("connect", () => {
+      document.querySelector("#connection-status").innerHTML = "Open";
+
+      client.subscribe(topic, { qos: 0 });
+    });
+
+    function toggleLed(status) {
+      console.log(status);
+      client.publish("esp32/gooner", status);
+    }
+
+    function setLed(status) {
+      const redImg = ledArray[0];
+      const yellowImg = ledArray[1];
+      const greenImg = ledArray[2];
+
+      redImg.src = `/images/${status[0]}.jpg`;
+      yellowImg.src = `/images/${status[1]}.jpg`;
+      greenImg.src = `/images/${status[2]}.jpg`;
+
+      // if (msgStr === "ON") {
+      //   buttonOn.classList.add("disabled");
+      //   buttonOff.classList.remove("disabled");
+      // } else if (msgStr === "OFF") {
+      //   ledElement.src = "/images/off.jpg";
+      //   buttonOff.classList.add("disabled");
+      //   buttonOn.classList.remove("disabled");
+      // }
+    }
+  </script>
+</html>
