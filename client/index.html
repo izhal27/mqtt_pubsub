@@ -35,15 +35,9 @@
             />
             <div>
               <a
-                id="button-red-on"
-                class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('on', 'r')"
-                >ON</a
-              >
-              <a
-                id="button-red-off"
-                class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('off', 'r')"
+                id="button-red"
+                class="waves-effect waves-light btn red"
+                onclick="toggleLed('red')"
                 >OFF</a
               >
             </div>
@@ -61,15 +55,9 @@
             />
             <div>
               <a
-                id="button-yellow-on"
-                class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('on', 'y')"
-                >ON</a
-              >
-              <a
-                id="button-yellow-off"
-                class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('off', 'y')"
+                id="button-yellow"
+                class="waves-effect waves-light btn red"
+                onclick="toggleLed('yellow')"
                 >OFF</a
               >
             </div>
@@ -87,15 +75,9 @@
             />
             <div>
               <a
-                id="button-green-on"
-                class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('on', 'g')"
-                >ON</a
-              >
-              <a
-                id="button-green-off"
-                class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('off', 'g')"
+                id="button-green"
+                class="waves-effect waves-light btn red"
+                onclick="toggleLed('green')"
                 >OFF</a
               >
             </div>
@@ -112,14 +94,15 @@
     referrerpolicy="no-referrer"
   ></script>
   <script>
-    const clientId = "izhal-27";
+    let statusObj = { red: 0, yellow: 0, green: 0 };
+    const random = (Math.random() + 1).toString(36).substring(7);
+    const clientId = `izhal-${random}`;
     const topic = "esp32/gooner";
-    let statusArr;
+
     // select all image container
-    const ledArray = document.querySelectorAll("img[id*='-led']");
+    const ledImageArray = getElements("img[id*='-led']");
     // select all button on and off
-    const buttonOnArray = document.querySelectorAll("a[id*='-on']");
-    const buttonOffArray = document.querySelectorAll("a[id*='-off']");
+    const buttons = getElements("a[id*='button-']");
 
     const client = mqtt.connect("ws://broker.emqx.io:8083/mqtt", {
       keepalive: 60,
@@ -137,10 +120,10 @@
       );
 
       const msgStr = message.toString();
-      statusArr = msgStr.split(";");
-      const statusObj = statusArr.reduce(({}, s) => [...s.split(";")]);
-      console.log(statusObj);
-      setLed(statusArr.map((sl) => sl.substring(2)));
+      statusObj = { ...JSON.parse(msgStr) };
+      Object.keys(statusObj).forEach((color) => {
+        setLedAndButton(color);
+      });
     });
 
     client.on("error", (err) => {
@@ -149,7 +132,7 @@
     });
 
     client.on("reconnect", () => {
-      setConnectStatus("Reconnecting");
+      console.log("Reconnecting");
     });
 
     client.on("connect", () => {
@@ -158,39 +141,32 @@
       client.subscribe(topic, { qos: 0 });
     });
 
-    function toggleLed(status, color) {
-      client.publish("esp32/gooner", status);
+    function toggleLed(color) {
+      statusObj[color] = statusObj[color] === 0 ? 1 : 0;
+      client.publish("esp32/gooner", JSON.stringify(statusObj));
+
+      setLedAndButton(color);
     }
 
-    function setLed(status) {
-      const redImg = ledArray[0];
-      const yellowImg = ledArray[1];
-      const greenImg = ledArray[2];
+    function setLedAndButton(color) {
+      const status = statusObj[color];
+      ledImageArray[`${color}-led`].src = `/images/${status}.jpg`;
 
-      redImg.src = `/images/${status[0]}.jpg`;
-      yellowImg.src = `/images/${status[1]}.jpg`;
-      greenImg.src = `/images/${status[2]}.jpg`;
+      const button = buttons[`button-${color}`];
+      button.textContent = status === 0 ? "ON" : "OFF";
 
-      setButtonOn(status);
-      setButtonOff(status);
-    }
-
-    function setButtonOn(status) {
-      buttonOnArray.forEach((btn, i) => toggleButton(btn, status[i]));
-    }
-
-    function setButtonOff(status) {
-      buttonOffArray.forEach((btn, i) => toggleButton(btn, status[i], "off"));
-    }
-
-    function toggleButton(btn, status, button = "on") {
-      if (button === "on" && !+status) {
-        btn.classList.remove("disabled");
+      if (!!status) {
+        button.classList.remove("red");
+      } else {
+        button.classList.add("red");
       }
+    }
 
-      if (button === "off" && +status) {
-        btn.classList.add("disabled");
-      }
+    function getElements(selector) {
+      return [...document.querySelectorAll(selector)].reduce(
+        (acc, curr) => ((acc[curr.id] = curr), acc),
+        {}
+      );
     }
   </script>
 </html>
