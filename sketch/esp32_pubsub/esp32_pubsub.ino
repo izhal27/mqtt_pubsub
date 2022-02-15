@@ -1,3 +1,5 @@
+#include <ArduinoJson.h>
+
 #include <WiFi.h>
 #include <PubSubClient.h>
 
@@ -25,12 +27,18 @@ void setup() {
   pinMode(pinRedLed, OUTPUT);
   pinMode(pinYellowLed, OUTPUT);
   pinMode(pinGreenLed, OUTPUT);
-  digitalWrite(pinRedLed, HIGH);
+  digitalWrite(pinRedLed, LOW);
   digitalWrite(pinYellowLed, LOW);
   digitalWrite(pinGreenLed, LOW);
 
   // Set software serial baud to 115200;
   Serial.begin(115200);
+
+  setupWiFi();
+  setupPubSub();
+}
+
+void setupWiFi() {
   // connecting to a WiFi network
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -38,6 +46,9 @@ void setup() {
     Serial.println("Connecting to " + String(( char *) ssid) + "...");
   }
   Serial.println("Connected to the WiFi network");
+}
+
+void setupPubSub() {
   //connecting to a mqtt broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);
@@ -53,6 +64,7 @@ void setup() {
       delay(2000);
     }
   }
+
   // publish and subscribe
   client.publish(topic, "Hi EMQ X I'm ESP32 ^^");
   client.subscribe(topic);
@@ -71,19 +83,28 @@ void callback(char *topic, byte *payload, unsigned int length) {
   payload[length] = 0;
   String message = String(( char *) payload);
 
-  //  Serial.println("Incomming message: " + message);
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, message);
 
-  // expect message
-  // r=1;y=1;g=1 or r=0;y=1;g=1
-  int r = getValue(message, ';', 0).substring(2).toInt();
-  int y = getValue(message, ';', 1).substring(2).toInt();
-  int g = getValue(message, ';', 2).substring(2).toInt();
+  // Test if parsing succeeds.
+  if (error) {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+    return;
+  }
 
-  digitalWrite(pinRedLed, r);
-  digitalWrite(pinYellowLed, y);
-  digitalWrite(pinGreenLed, g);
+  int red = doc["red"];
+  int yellow = doc["yellow"];
+  int green = doc["green"];
 
-  Serial.println();
+  //  Serial.println(red);
+  //  Serial.println(yellow);
+  //  Serial.println(green);
+
+  digitalWrite(pinRedLed, red);
+  digitalWrite(pinYellowLed, yellow);
+  digitalWrite(pinGreenLed, green);
+
   Serial.println("-----------------------");
 }
 
@@ -111,20 +132,25 @@ void loop() {
 
     Serial.println("publish message");
 
-    String redLedCurrent = String(digitalRead(pinRedLed));
-    String yellowLedCurrent = String(digitalRead(pinYellowLed));
-    String greenLedCurrent = String(digitalRead(pinGreenLed));
+    int redLedCurrent = digitalRead(pinRedLed);
+    int yellowLedCurrent = digitalRead(pinYellowLed);
+    int greenLedCurrent = digitalRead(pinGreenLed);
 
-    //    Serial.println("=================");
-    //    Serial.println(redLedCurrent);
-    //    Serial.println(yellowLedCurrent);
-    //    Serial.println(greenLedCurrent);
-    //    Serial.println("=================");
+    const int capacity = JSON_OBJECT_SIZE(3);
+    StaticJsonDocument<capacity> doc;
 
-    String statusLed = String("r=" + redLedCurrent + ";y=" + yellowLedCurrent + ";g=" + greenLedCurrent);
-    Serial.println(statusLed);
+    doc["red"] = redLedCurrent;
+    doc["yellow"] = yellowLedCurrent;
+    doc["green"] = greenLedCurrent;
 
-    client.publish(topic, statusLed.c_str());
+    //    JsonObject obj = doc.to<JsonObject>();
+    char output[128];
+    serializeJson(doc, output);
+    Serial.println(output);
+
+    Serial.println();
+    client.publish(topic, output);
+    Serial.println("========================");
   }
 
   client.loop();
