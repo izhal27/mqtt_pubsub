@@ -37,13 +37,13 @@
               <a
                 id="button-red-on"
                 class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('ON')"
+                onclick="toggleLed('on', 'r')"
                 >ON</a
               >
               <a
                 id="button-red-off"
                 class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('OFF')"
+                onclick=" toggleLed('off', 'r')"
                 >OFF</a
               >
             </div>
@@ -63,13 +63,13 @@
               <a
                 id="button-yellow-on"
                 class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('ON')"
+                onclick="toggleLed('on', 'y')"
                 >ON</a
               >
               <a
                 id="button-yellow-off"
                 class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('OFF')"
+                onclick=" toggleLed('off', 'y')"
                 >OFF</a
               >
             </div>
@@ -89,13 +89,13 @@
               <a
                 id="button-green-on"
                 class="waves-effect waves-light btn disabled"
-                onclick="toggleLed('ON')"
+                onclick="toggleLed('on', 'g')"
                 >ON</a
               >
               <a
                 id="button-green-off"
                 class="waves-effect waves-light btn disabled"
-                onclick=" toggleLed('OFF')"
+                onclick=" toggleLed('off', 'g')"
                 >OFF</a
               >
             </div>
@@ -114,9 +114,12 @@
   <script>
     const clientId = "izhal-27";
     const topic = "esp32/gooner";
+    let statusArr;
+    // select all image container
     const ledArray = document.querySelectorAll("img[id*='-led']");
-    const buttonOn = document.querySelector("#button-on");
-    const buttonOff = document.querySelector("#button-off");
+    // select all button on and off
+    const buttonOnArray = document.querySelectorAll("a[id*='-on']");
+    const buttonOffArray = document.querySelectorAll("a[id*='-off']");
 
     const client = mqtt.connect("ws://broker.emqx.io:8083/mqtt", {
       keepalive: 60,
@@ -134,9 +137,10 @@
       );
 
       const msgStr = message.toString();
-      const statusArr = msgStr.split(";").map((sl) => sl.substring(2));
-
-      setLed(statusArr);
+      statusArr = msgStr.split(";");
+      const statusObj = statusArr.reduce(({}, s) => [...s.split(";")]);
+      console.log(statusObj);
+      setLed(statusArr.map((sl) => sl.substring(2)));
     });
 
     client.on("error", (err) => {
@@ -154,8 +158,7 @@
       client.subscribe(topic, { qos: 0 });
     });
 
-    function toggleLed(status) {
-      console.log(status);
+    function toggleLed(status, color) {
       client.publish("esp32/gooner", status);
     }
 
@@ -168,14 +171,26 @@
       yellowImg.src = `/images/${status[1]}.jpg`;
       greenImg.src = `/images/${status[2]}.jpg`;
 
-      // if (msgStr === "ON") {
-      //   buttonOn.classList.add("disabled");
-      //   buttonOff.classList.remove("disabled");
-      // } else if (msgStr === "OFF") {
-      //   ledElement.src = "/images/off.jpg";
-      //   buttonOff.classList.add("disabled");
-      //   buttonOn.classList.remove("disabled");
-      // }
+      setButtonOn(status);
+      setButtonOff(status);
+    }
+
+    function setButtonOn(status) {
+      buttonOnArray.forEach((btn, i) => toggleButton(btn, status[i]));
+    }
+
+    function setButtonOff(status) {
+      buttonOffArray.forEach((btn, i) => toggleButton(btn, status[i], "off"));
+    }
+
+    function toggleButton(btn, status, button = "on") {
+      if (button === "on" && !+status) {
+        btn.classList.remove("disabled");
+      }
+
+      if (button === "off" && +status) {
+        btn.classList.add("disabled");
+      }
     }
   </script>
 </html>
