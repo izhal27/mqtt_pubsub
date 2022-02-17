@@ -22,151 +22,30 @@
           <span id="connection-status"> Closed</span>
         </h4>
       </div>
-      <div class="row center">
-        <div class="col s12 m4">
-          <h5 class="red-text">Red Status</h5>
+      <div id="led-container" class="row center"></div>
+    </main>
+
+    <template id="template-led">
+      <div class="col s12 m4">
+        <h5></h5>
+        <div>
+          <img src="/images/off.png" alt="Bulb" />
           <div>
-            <img
-              id="red-led"
-              src="/images/0.jpg"
-              alt="Bulb"
-              width="200"
-              height="300"
-            />
-            <div>
-              <a
-                id="button-red"
-                class="waves-effect waves-light btn red"
-                onclick="toggleLed('red')"
-                >OFF</a
-              >
-            </div>
-          </div>
-        </div>
-        <div class="col s12 m4">
-          <h5 class="yellow-text">Yellow Status</h5>
-          <div>
-            <img
-              id="yellow-led"
-              src="/images/0.jpg"
-              alt="Bulb"
-              width="200"
-              height="300"
-            />
-            <div>
-              <a
-                id="button-yellow"
-                class="waves-effect waves-light btn red"
-                onclick="toggleLed('yellow')"
-                >OFF</a
-              >
-            </div>
-          </div>
-        </div>
-        <div class="col s12 m4">
-          <h5 class="green-text">Green Status</h5>
-          <div>
-            <img
-              id="green-led"
-              src="/images/0.jpg"
-              alt="Bulb"
-              width="200"
-              height="300"
-            />
-            <div>
-              <a
-                id="button-green"
-                class="waves-effect waves-light btn red"
-                onclick="toggleLed('green')"
-                >OFF</a
-              >
-            </div>
+            <a class="waves-effect waves-light btn">ON</a>
           </div>
         </div>
       </div>
-    </main>
+    </template>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script
+      src=" https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.5/mqtt.min.js"
+      integrity="sha512-O1ua7Y2KndehfLohWt0tueZVjH7Ip/Klo8lBWHPh8PFvWqNhXJ+GoutDBKSFuWlLdPBJVA+lwqwjCZd/G8k3IQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="./scripts/utils.js"></script>
+    <script src="./scripts/mqtt-client.js"></script>
+    <script src="./scripts/index.js"></script>
   </body>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script
-    src=" https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.5/mqtt.min.js"
-    integrity="sha512-O1ua7Y2KndehfLohWt0tueZVjH7Ip/Klo8lBWHPh8PFvWqNhXJ+GoutDBKSFuWlLdPBJVA+lwqwjCZd/G8k3IQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
-  <script>
-    let statusObj = { red: 0, yellow: 0, green: 0 };
-    const random = (Math.random() + 1).toString(36).substring(7);
-    const clientId = `izhal-${random}`;
-    const topic = "esp32/gooner";
-
-    // select all image container
-    const ledImageArray = getElements("img[id*='-led']");
-    // select all button on and off
-    const buttons = getElements("a[id*='button-']");
-
-    const client = mqtt.connect("ws://broker.emqx.io:8083/mqtt", {
-      keepalive: 60,
-      clientId: clientId,
-      protocolId: "MQTT",
-      protocolVersion: 4,
-      clean: true,
-      reconnectPeriod: 1000,
-      connectTimeout: 30 * 1000,
-    });
-
-    client.on("message", (topic, message, packet) => {
-      console.log(
-        "Received Message: " + message.toString() + "\nOn topic: " + topic
-      );
-
-      const msgStr = message.toString();
-      statusObj = { ...JSON.parse(msgStr) };
-      Object.keys(statusObj).forEach((color) => {
-        setLedAndButton(color);
-      });
-    });
-
-    client.on("error", (err) => {
-      console.log("Connection error: ", err);
-      client.end();
-    });
-
-    client.on("reconnect", () => {
-      console.log("Reconnecting");
-    });
-
-    client.on("connect", () => {
-      document.querySelector("#connection-status").innerHTML = "Open";
-
-      client.subscribe(topic, { qos: 0 });
-    });
-
-    function toggleLed(color) {
-      statusObj[color] = statusObj[color] === 0 ? 1 : 0;
-      client.publish("esp32/gooner", JSON.stringify(statusObj));
-
-      setLedAndButton(color);
-    }
-
-    function setLedAndButton(color) {
-      const status = statusObj[color];
-      ledImageArray[`${color}-led`].src = `/images/${status}.jpg`;
-
-      const button = buttons[`button-${color}`];
-      button.textContent = status === 0 ? "ON" : "OFF";
-
-      if (!!status) {
-        button.classList.remove("red");
-      } else {
-        button.classList.add("red");
-      }
-    }
-
-    function getElements(selector) {
-      return [...document.querySelectorAll(selector)].reduce(
-        (acc, curr) => ((acc[curr.id] = curr), acc),
-        {}
-      );
-    }
-  </script>
 </html>
