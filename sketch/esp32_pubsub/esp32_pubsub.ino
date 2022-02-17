@@ -12,7 +12,7 @@ const char *mqtt_broker = "host";
 const char *topic = "your-topic";
 const char *mqtt_username = "username";
 const char *mqtt_password = "password";
-const int mqtt_port = 1883;
+const int mqtt_port = "port";
 
 const int pinRedLed = 27;
 const int pinYellowLed = 26;
